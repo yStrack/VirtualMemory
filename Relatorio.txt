@@ -1,0 +1,429 @@
+Grupo:
+1 - Yuri Marques Strack
+
+====================================================================================================
+DESCRICAO DO SIMULADOR:
+O simulador de memória virtual desenvolvido por nós funciona da seguinte forma:
+  -O arquivo .log é lido e por meio dele são feitas as operações de criação de pagina
+  e de inserção em memória física, uma vez que a ordem de inserção em memória é a mesma
+  da do arquivo .log.
+  -Durante essas operações os flags da pagina são atualizados bem como seu tempo de
+  acesso.
+  -As paginas são colocadas em memória até acabar o espaço disponível para elas (
+  tamanho da memória física/tamanho da pagina). Ao terminar o espaço disponível os
+  algoritmos de substituição passam a ser chamados sempre que uma pagina precisa
+  ser colocada em memória.
+  -O simulador terminar quando não houver mais nada para ser lido no arquivo .log.
+
+Obs1: As flags R são zeradas sempre que o número de leituras do arquivo (variável tempo)
+for igual ao numero de quadros de memória, ou seja, sempre que a variável tempo
+for múltiplo do tamanho da memória física a flag R é zerada. A função de zerar é
+chamada após o tempo ser incrementado (vale a pena ressaltar isso pois se o tempo
+for incrementado depois da função ser chamada os resultados são um pouco diferentes
+dos apresentados abaixo).
+
+Obs2: A invocação do simulador é feita assim:
+./simulador [algoritmo] [arquivo] [tamanho da Pagina] [tamanho da memoria]
+
+Sendo que o tamanho da pagina deve ser de 8 a 32 (somente aceito valores entre 8 e 32)
+e o tamanho da memória de 1 a 16 (somente aceito valores entre 1 e 16).
+É possível invocar com o modo debug para isso basta adicionar -d ou depurar no
+final do comando:
+./simulador [algoritmo] [arquivo] [tamanho da Pagina] [tamanho da memoria] -d
+
+Obs3: Na saída do arquivo onde tem "Numero de paginas escritas: ", esse dado representa
+o numero de paginas sujas.
+
+INFORMAÇÕES TÉCNICAS:
+
+1) Estruturas de dados utilizadas:
+Foram criados dois vetores de paginas*, um responsável por representar a tabela
+de paginas, com tamanho de 2ˆ(32-s) (Calculo do valor s explicado no tópico 2)),
+o outro responsável por representar a memória física, com tamanho igual a
+(tamanho da memoria fisica)/(tamanho da pagina).
+
+*As paginas foram representadas por uma struct pagina que possui os seguinte atributos:
+  -indice (identificador da pagina, calculado por addr >> s)
+  -r (flag de pagina referenciada)
+  -m (flag de pagina modificada)
+  -tempoAcesso (instante do ultimo acesso da pagina em memória)
+  -presença (flag de controle se a pagina esta ou não em memória)
+
+2) Calculo das paginas:
+Para calcular o identificador das paginas foi feito o seguinte calculo:
+page = addr >> s
+Com addr sendo o endereço lido no arquivo .log e 's' sendo calculado pela seguinte
+formula:
+s = ((tamanho da pagina)/8) + 12
+
+3) Algoritmos LRU e NRU:
+O algoritmo LRU (Least Recently Used) verifica dentre as paginas que estão em memória
+física aquela que possui o menor tempo de acesso*, ou seja a pagina que ficou sem
+acesso por maior tempo, e retira-a, colocando em seu lugar a pagina requisitada p/
+R ou W.
+
+O algoritmo NRU (Not Recently Used) verifica dentre as paginas que estão em memória
+fisica qual deve ser retira seguindo os criterios:
+  1- Flag R=0, Flag M=0
+  2- Flag R=0, Flag M=1
+  3- Flag R=1, Flag M=0
+  4- Flag R=1, Flag M=1
+Primeiro verifica se alguém possui o critério 1 se houver retira-a, se não houver
+verifica o critério 2 e assim por diante.
+
+*Obs: A contagem de tempo no nosso simulador é feita por meio de uma variável
+(int tempo) que começa com valor 0(zero) e incrementada a cada iteração do simulador.
+Sendo assim, o tempo sempre está aumentando.
+Dessa forma a pagina que possui menor tempoAcesso é aquela que não foi acessada por
+mais tempo.
+
+4) Algoritmo OPTimo:
+Nesse algoritmo cada pagina seria marcada com o numero de instruções que serão
+executadas antes mesmo da pagina ser referenciada. Dessa forma, o algoritmo ótimo
+já saberia quando as paginas serão referenciadas novamente, "prevendo o futuro".
+A pagina a ser substituída seria aquela que só será acessada em um futuro mais
+distante, ou seja, aquela que possui menos chance de ser referenciada.
+
+5) Comparação LRU X NRU:
+Pelos resultados é possível perceber que o algoritmo LRU é mais eficiente pois ele
+é um algoritmo mais "inteligente", tendo como base o fato de que se uma pagina ficou
+sem acesso por muito tempo a probabilidade dela ser usada novamente é menor, ou seja
+uma pagina que foi usada recentemente tem mais chance de ser usada novamente. Por esse
+motivo o numero de page faults pelo método LRU é menor se comparado com o NRU (método
+mais "bruto").
+
+-Tabela comparativa:
+Arquivo     Alg. Subs     Tam. Pag     Tam. Mem     PageFault     Page Escrita
+              LRU           8KB            1MB         36707         5775
+              NRU           8KB            1MB         73390         7271
+Compilador    LRU           16KB           1MB         47424         7770
+              NRU           16KB           1MB         92732         9303
+              LRU           32KB           1MB         49571         8352
+              NRU           32KB           1MB         92754         9263
+
+              LRU           8KB            1MB         533            132
+              NRU           8KB            1MB         1390           6
+Compressor    LRU           16KB           1MB         729            265
+              NRU           16KB           1MB         2309           384
+              LRU           32KB           1MB         718            291
+              NRU           32KB           1MB         3781           470
+
+              LRU           8KB            1MB         10928          3273
+              NRU           8KB            1MB         57191          10664
+Matriz        LRU           16KB           1MB         15904          4517
+              NRU           16KB           1MB         99398          15075
+              LRU           32KB           1MB         21930          4335
+              NRU           32KB           1MB         134490         16204
+
+              LRU           8KB            1MB         16479          5546
+              NRU           8KB            1MB         74050          13494
+Simulador     LRU           16KB           1MB         29547          8267
+              NRU           16KB           1MB         94642          15666
+              LRU           32KB           1MB         36761          7540
+              NRU           32KB           1MB         95107          15564
+
+6) Resultados da execução:
+  - Arquivo: compilador.log Tamanho da memoria fisica: 1MB
+      -Tamanho da pagina: 8kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru compilador.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada compilador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 36707
+      Numero de paginas escritas: 5775
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU compilador.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada compilador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 73390
+      Numero de paginas escritas: 7271
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 16kp
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru compilador.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada compilador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 47424
+      Numero de paginas escritas: 7770
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU compilador.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada compilador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 92732
+      Numero de paginas escritas: 9303
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 32kp
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru compilador.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada compilador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 49571
+      Numero de paginas escritas: 8352
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU compilador.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada compilador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 92754
+      Numero de paginas escritas: 9263
+================================================================================
+    - Arquivo: compressor.log Tamanho da memoria fisica: 1MB
+      -Tamanho da pagina: 8kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru compressor.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada compressor.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 533
+      Numero de paginas escritas: 132
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador nru compressor.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada compressor.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: nru
+      Numero de Faltas de pagina: 1390
+      Numero de paginas escritas: 6
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 16kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru compressor.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada compressor.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 729
+      Numero de paginas escritas: 265
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador nru compressor.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada compressor.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: nru
+      Numero de Faltas de pagina: 2309
+      Numero de paginas escritas: 384
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 32kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru compressor.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada compressor.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 718
+      Numero de paginas escritas: 291
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU compressor.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada compressor.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 3781
+      Numero de paginas escritas: 470
+================================================================================
+    - Arquivo: matriz.log Tamanho da memoria fisica: 1MB
+      -Tamanho da pagina: 8kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru matriz.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada matriz.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 10928
+      Numero de paginas escritas: 3273
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU matriz.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada matriz.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 57191
+      Numero de paginas escritas: 10664
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 16kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru matriz.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada matriz.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 15904
+      Numero de paginas escritas: 4517
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU matriz.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada matriz.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 99398
+      Numero de paginas escritas: 15075
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 32kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru matriz.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada matriz.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 21930
+      Numero de paginas escritas: 4335
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU matriz.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada matriz.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 134490
+      Numero de paginas escritas: 16204
+================================================================================
+    - Arquivo: simulador.log Tamanho da memoria fisica: 1MB
+      -Tamanho da pagina: 8kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru simulador.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada simulador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 16479
+      Numero de paginas escritas: 5546
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU simulador.log 8 1
+
+      Executando o simulador...
+      Arquivo de entrada simulador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 8KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 74050
+      Numero de paginas escritas: 13494
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 16kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru simulador.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada simulador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 29547
+      Numero de paginas escritas: 8267
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU simulador.log 16 1
+
+      Executando o simulador...
+      Arquivo de entrada simulador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 16KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 94642
+      Numero de paginas escritas: 15666
+--------------------------------------------------------------------------------
+      -Tamanho da pagina: 32kb
+      -Algoritmo de substituicao: LRU
+
+      ./simulador lru simulador.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada simulador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: lru
+      Numero de Faltas de pagina: 36761
+      Numero de paginas escritas: 7540
+
+      -Algoritmo de substituicao: NRU
+
+      ./simulador NRU simulador.log 32 1
+
+      Executando o simulador...
+      Arquivo de entrada simulador.log
+      Tamanho da memoria fisica: 1MB
+      Tamanho das paginas: 32KB
+      Alg de substituicao: NRU
+      Numero de Faltas de pagina: 95107
+      Numero de paginas escritas: 15564
+================================================================================
