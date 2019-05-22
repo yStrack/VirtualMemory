@@ -1,5 +1,5 @@
 # Virtual Memory Simulator
-- The purpose of this project is to develop in C a virtual memory simulator. The simulator have data structures and a mechanisms of
+- The purpose of this project is to develop in C a virtual memory simulator. The simulator have data structures and a mechanism of
 Memory mapping (logical -> physical) required to perform a pagination, and  two replacement algorithms for Pages: the Recently Unused (NRU) and the Least- Recently used (LRU).  
 - The file **_relatorio.txt_** explains how it works and the returned results in portuguese.
 # Development enviroment
